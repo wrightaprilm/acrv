@@ -1,0 +1,50 @@
+morpho <- readDiscreteCharacterData("matrix2.nex")
+taxa <- morpho.taxa()
+moves = VectorMoves()
+monitors = VectorMonitors()
+
+n_taxa <- taxa.size()
+
+num_branches <- 2 * n_taxa - 2
+
+
+alpha ~ dnReversibleJumpMixture(1E8, dnUniform(0,1E8), 0.5)
+alpha.setValue(1.0)
+moves.append( mvRJSwitch(alpha, weight=10.0) )
+moves.append( mvScale(alpha, weight=10.0) )
+
+alpha_indicator := ifelse(alpha == 1E8, 0, 1)
+
+site_rates := fnDiscretizeGamma(alpha, alpha, 4)
+source("rjMCMC/model_Mk.Rev")
+
+
+
+
+
+
+
+     mymodel = model(phylogeny)
+
+
+
+     monitors.append(mnModel(filename="output/acrv2.log", printgen=100))
+
+
+
+     monitors.append(mnFile(filename="output/acrv2.trees", printgen=100,  phylogeny))
+
+
+
+     monitors.append(mnScreen(printgen=100))
+
+
+
+     mymcmc = mcmc(mymodel, monitors, moves, nrun=2, combine="mixed")
+
+
+     mymcmc.run(generations=100000)
+
+
+
+     q()

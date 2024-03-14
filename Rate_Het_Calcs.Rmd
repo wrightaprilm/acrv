@@ -1,0 +1,123 @@
+---
+title: "ACRV"
+output: html_document
+date: "2024-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+First, let's pull some basics - what model was preferred by what dataset?
+```{r}
+
+alpha_values <-c(0)
+alpha_indicators <-c(0)
+names <-c(0)
+
+for (file in list.files(path=".", pattern=".log")){
+  data <- read_delim(file)
+  names <- c(names, file)
+  median = median(data$alpha)
+  med_ind = median(data$alpha_indicator)
+  alpha_values <- c(alpha_values, median)
+  alpha_indicator <- c(alpha_indicator, med_ind)
+}
+```
+
+
+Next, let's grab the differences between the largest and smallest Gamma categories.
+
+```{r}
+diffs <-c(0)
+
+for (file in list.files(path=".", pattern=".log")){
+  data <- read_delim(file)
+  names <- c(names, file)
+  median1 = median(data$`site_rates[1]`)
+  median2 = median(data$`site_rates[2]`)
+  median3 = median(data$`site_rates[3]`)
+  median4 = median(data$`site_rates[4]`)
+  median_vec <- c(median1, median2, median3, median4)
+  min_med <- min(median_vec)
+  max_med <- max(median_vec)
+  diffs <- c(diffs, max_med - min_med)
+}
+```
+
+Wrap it all up in a dataframe:
+
+```{r}
+
+alpha_indicators <- alpha_indicators[2:572]
+names <- names[2:572]
+alpha_values <- alpha_values[2:572]
+diff_values <- diffs[2:572]
+
+dataframe <- data.frame(names, alpha_indicators, alpha_values, diff_values)
+
+```
+
+And plot: 
+
+First, model preferences. 
+```{r}
+
+dataframe %>% 
+  count(alpha_indicators == 1)
+# Quick count - 405 of 577 datasets favor Rate Het
+ggplot(dataframe, aes(x = alpha_indicators)) + geom_density()
+
+```
+
+Extremes. Either the data strongly favor rate het or they do not. 
+
+
+```{r}
+dataframe %>% 
+  count(alpha_values > 100)
+# For the datasets, about half have a distribution that implies a heavily concentrated set of rates (ie, little rate variation, but not none). We probably want a figure in here of how different gamma dists look
+
+ggplot(dataframe, aes(x = alpha_values)) + geom_density()
+
+
+```
+Favortism for extremes: on the upper end, no rate het. On the lower end, strong rate het.
+
+Now for the differences in the rate categories between the smallest and largest rates. 
+```{r}
+ggplot(dataframe, aes(x = diffs)) + geom_density()
+
+```
+Now let's strip this to only data for which there is no model preference for rate het:
+
+```{r}
+filtered <- dataframe %>% 
+  filter(alpha_indicators != 1) 
+ggplot(filtered, aes(x = diff_values)) + geom_density()
+
+
+```
+Makes sense - if the MCMC doesn't prefer rate het, our rate categories are all the same. Good. Now let's strip this to only data for which there is  model preference for rate het:
+
+```{r}
+filtered <- dataframe %>% 
+  filter(alpha_indicators == 1) 
+ggplot(filtered, aes(x= diff_values)) + geom_histogram()
+```
+
+This is interesting because there is still a good amount of datasets for which there is a preference for rate het, but then the categories are the same. Hm. 
+
+You can try some different values in here. But basically, for about a third of data sets with rate het, the rate het is quite small.
+
+```{r}
+dataframe %>% 
+  filter(alpha_indicators == 1) %>% 
+  count(diff_values <= .005)
+
+mean(dataframe$diff_values, na.rm = TRUE)
+median(dataframe$diff_values, na.rm = TRUE)
+
+```
+
